@@ -114,9 +114,11 @@ function TestPage() {
   React.useEffect(() => {
     if (timeRemaining === null) return;
 
-    if (timeRemaining <= 0 && !timerExpired) {
+    if (timeRemaining <= 0) {
+      if(!timerExpired) {
         setTimerExpired(true);
-        return;
+      }
+      return;
     }
 
     const timer = setInterval(() => {
@@ -146,34 +148,18 @@ function TestPage() {
 
   React.useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = '';
+      if (!isFinishing) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
     };
-
-    const handlePopState = () => {
-        if (window.confirm('Are you sure you want to leave? Your test progress will be lost.')) {
-            localStorage.removeItem("testprep-session");
-            router.push('/');
-        } else {
-            history.pushState(null, '', location.href);
-        }
-    };
-    
     window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('popstate', handlePopState);
-
-    // Initial push to history to detect back button
-    history.pushState(null, '', location.href);
-
     return () => {
-        window.removeEventListener('beforeunload', handleBeforeUnload);
-        window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [router]);
-  
-  const handleSelectAnswer = (questionId: string, answerIndex: number) => {
-    if (isAnswered(questionId)) return;
+  }, [isFinishing]);
 
+  const handleSelectAnswer = (questionId: string, answerIndex: number) => {
     const question = questions.find(q => q.id === questionId);
     if (!question) return;
 
@@ -181,11 +167,6 @@ function TestPage() {
 
     setAnswers(prev => prev.map(a => a.questionId === questionId ? {...a, selectedAnswerIndex: answerIndex, isCorrect} : a));
   };
-
-  const isAnswered = (questionId: string) => {
-    const answer = answers.find(a => a.questionId === questionId);
-    return answer ? answer.selectedAnswerIndex !== null : false;
-  }
   
   const finishTest = (force = false) => {
     if (isFinishing) return;
@@ -244,6 +225,30 @@ function TestPage() {
     return "bg-muted";
   };
   
+  const getOptionClassName = (
+    optionIndex: number,
+    question: Question,
+    answer: UserAnswer | undefined
+  ) => {
+    const isSelected = answer?.selectedAnswerIndex === optionIndex;
+    const isCorrect = question.correctAnswerIndex === optionIndex;
+    const isAnswered = answer?.selectedAnswerIndex !== null;
+
+    if (isAnswered) {
+      if (isCorrect) {
+        return "border-green-500 bg-green-100/50 dark:bg-green-900/20 text-green-800 dark:text-green-300";
+      }
+      if (isSelected && !isCorrect) {
+        return "border-red-500 bg-red-100/50 dark:bg-red-900/20 text-red-800 dark:text-red-300";
+      }
+    } else if (isSelected) {
+      return "border-primary";
+    }
+
+    return "cursor-pointer";
+  };
+
+
   return (
     <div className="flex flex-col md:flex-row h-screen overflow-hidden">
         {/* Question Navigation Sidebar */}
@@ -297,35 +302,26 @@ function TestPage() {
                             <CardDescription className="text-lg pt-2">{currentQuestion.questionText}</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <RadioGroup
+                             <RadioGroup
                                 key={currentQuestion.id}
-                                value={currentAnswer?.selectedAnswerIndex !== null ? String(currentAnswer?.selectedAnswerIndex) : undefined}
+                                value={currentAnswer?.selectedAnswerIndex !== null ? String(currentAnswer.selectedAnswerIndex) : undefined}
                                 onValueChange={(value) => handleSelectAnswer(currentQuestion.id, Number(value))}
-                                disabled={isAnswered(currentQuestion.id)}
+                                disabled={currentAnswer?.selectedAnswerIndex !== null}
                                 className="space-y-4"
                             >
-                                {currentQuestion.options.map((option, index) => {
-                                    const isSelected = currentAnswer?.selectedAnswerIndex === index;
-                                    const isCorrect = currentQuestion.correctAnswerIndex === index;
-                                    const answered = currentAnswer?.selectedAnswerIndex !== null;
-
-                                    return (
-                                        <Label
-                                            key={index}
-                                            htmlFor={`${currentQuestion.id}-${index}`}
-                                            className={cn(
-                                                "flex items-center space-x-4 rounded-md border p-4 transition-all hover:bg-accent/50",
-                                                answered && isSelected && isCorrect && "border-green-500 bg-green-100/50 dark:bg-green-900/20 text-green-800 dark:text-green-300",
-                                                answered && isSelected && !isCorrect && "border-red-500 bg-red-100/50 dark:bg-red-900/20 text-red-800 dark:text-red-300",
-                                                !answered && isSelected && "border-primary",
-                                                isAnswered(currentQuestion.id) ? "cursor-not-allowed" : "cursor-pointer"
-                                            )}
-                                        >
-                                            <RadioGroupItem value={index.toString()} id={`${currentQuestion.id}-${index}`} />
-                                            <span>{option}</span>
-                                        </Label>
-                                    );
-                                })}
+                                {currentQuestion.options.map((option, index) => (
+                                    <Label
+                                        key={index}
+                                        htmlFor={`${currentQuestion.id}-${index}`}
+                                        className={cn(
+                                            "flex items-center space-x-4 rounded-md border p-4 transition-all hover:bg-accent/50",
+                                            getOptionClassName(index, currentQuestion, currentAnswer)
+                                        )}
+                                    >
+                                        <RadioGroupItem value={index.toString()} id={`${currentQuestion.id}-${index}`} />
+                                        <span>{option}</span>
+                                    </Label>
+                                ))}
                             </RadioGroup>
                         </CardContent>
                         <CardFooter className="flex justify-between">
