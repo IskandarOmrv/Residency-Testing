@@ -63,19 +63,26 @@ function TestPage() {
   const timeLimit = React.useMemo(() => Number(searchParams.get("time") || "0") * 60, [searchParams]);
 
   React.useEffect(() => {
-    const handlePopState = (e: PopStateEvent) => {
-      // Prevent the user from going back.
-      // This is a bit of a hack, but it's the most reliable way to prevent back navigation.
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    const handlePopState = () => {
       if (sessionId) {
-        window.history.pushState(null, "", window.location.href);
+        window.history.pushState(null, '', window.location.href);
         document.getElementById('header-dialog-trigger')?.click();
       }
     };
     
-    window.history.pushState(null, "", window.location.href);
-    window.addEventListener('popstate', handlePopState);
+    if (sessionId) {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      window.history.pushState(null, "", window.location.href);
+      window.addEventListener('popstate', handlePopState);
+    }
     
     return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('popstate', handlePopState);
     };
   }, [sessionId]);
@@ -137,14 +144,14 @@ function TestPage() {
     }));
   };
   
- React.useEffect(() => {
+  React.useEffect(() => {
     let timer: NodeJS.Timeout;
     if (timeRemaining !== null && timeRemaining > 0) {
       timer = setInterval(() => {
         setTimeRemaining(prev => (prev !== null ? Math.max(0, prev - 1) : null));
       }, 1000);
     } else if (timeRemaining === 0) {
-      setTimerExpired(true);
+        setTimerExpired(true);
     }
     return () => clearInterval(timer);
   }, [timeRemaining]);
@@ -329,7 +336,7 @@ function TestPage() {
                 </div>
             </header>
 
-            <div className="flex-1 flex items-start sm:items-center justify-center p-2 sm:p-8">
+            <div className="flex-1 flex items-start sm:items-center justify-center p-2 sm:p-4">
                 {currentQuestion && (
                     <Card className="w-full max-w-3xl animate-in fade-in-50">
                         <CardHeader className="p-4 sm:p-6">
@@ -342,6 +349,7 @@ function TestPage() {
                                 value={currentAnswer?.selectedAnswerIndex?.toString()}
                                 onValueChange={(value) => handleSelectAnswer(currentQuestion.id, Number(value))}
                                 className="space-y-2"
+                                disabled={currentAnswer?.selectedAnswerIndex !== null}
                             >
                                 {currentQuestion.options.map((option, index) => (
                                     <Label
@@ -364,7 +372,7 @@ function TestPage() {
                             </Button>
                             <Button onClick={() => {
                                 if (currentAnswer?.selectedAnswerIndex === null) {
-                                    handleSelectAnswer(currentQuestion.id, -1); // Mark as unanswered to trigger review styling
+                                    handleSelectAnswer(currentQuestion.id, -1); 
                                 }
                                 setCurrentQuestionIndex(p => Math.min(questions.length - 1, p + 1))
                             }}>
@@ -389,6 +397,27 @@ function TestPage() {
                     <AlertDialogFooter>
                     <AlertDialogCancel onClick={() => setIsFinishing(false)}>Go Back</AlertDialogCancel>
                     <AlertDialogAction onClick={() => finishTest(true)}>Finish Anyway</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <button id="header-dialog-trigger" className="hidden" />
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure you want to leave?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Your current test progress will be lost and will not be saved to your history. You cannot undo this action.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Stay on Test</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => {
+                            localStorage.removeItem("testprep-session");
+                            router.back();
+                        }}>Leave Test</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
