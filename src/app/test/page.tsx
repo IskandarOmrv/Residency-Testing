@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { DndProvider, useDrag, useDrop } from 'react-dnd';
+import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import {
   Card,
@@ -27,6 +27,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, formatTime } from "@/lib/utils";
 import type { Question, UserAnswer, TestResult } from "@/lib/types";
@@ -34,16 +35,22 @@ import allQuestionsData from "@/data/questions.json";
 import {
   ArrowLeft,
   ArrowRight,
-  Check,
+  ChevronRight,
   Flag,
+  List,
   Loader2,
   Timer,
 } from "lucide-react";
 import { Suspense } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
+
 
 function TestPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isMobile = useIsMobile();
+  const [isSheetOpen, setIsSheetOpen] = React.useState(false);
+
 
   const [questions, setQuestions] = React.useState<Question[]>([]);
   const [answers, setAnswers] = React.useState<UserAnswer[]>([]);
@@ -83,7 +90,8 @@ function TestPage() {
       startNewSession(numQuestions, timeLimit);
     }
     setIsLoading(false);
-  }, [router, searchParams, timeLimit]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, searchParams]);
   
   const startNewSession = (numQuestions: number, timeLimit: number) => {
     const shuffled = [...allQuestionsData.questions].sort(() => 0.5 - Math.random());
@@ -111,20 +119,15 @@ function TestPage() {
     }));
   };
   
-  React.useEffect(() => {
-    if (timeRemaining === null) return;
-
-    if (timeRemaining <= 0) {
-      if(!timerExpired) {
-        setTimerExpired(true);
-      }
-      return;
+ React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (timeRemaining !== null && timeRemaining > 0) {
+      timer = setInterval(() => {
+        setTimeRemaining(prev => (prev !== null ? Math.max(0, prev - 1) : null));
+      }, 1000);
+    } else if (timeRemaining === 0 && !timerExpired) {
+      setTimerExpired(true);
     }
-
-    const timer = setInterval(() => {
-      setTimeRemaining(prev => (prev !== null ? Math.max(0, prev - 1) : null));
-    }, 1000);
-    
     return () => clearInterval(timer);
   }, [timeRemaining, timerExpired]);
 
@@ -132,6 +135,7 @@ function TestPage() {
     if (timerExpired) {
       finishTest(true);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timerExpired]);
   
   React.useEffect(() => {
@@ -146,18 +150,21 @@ function TestPage() {
     }
   }, [currentQuestionIndex, answers, isLoading, sessionId]);
 
-  React.useEffect(() => {
+ React.useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (!isFinishing) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
+      // This is a browser feature, and we can't guarantee it will work perfectly,
+      // but it's the standard way to prompt the user before they leave.
+      e.preventDefault();
+      // Most modern browsers ignore this message and show a generic one.
+      e.returnValue = 'Are you sure you want to leave? Your test progress will be lost.';
     };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
+
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [isFinishing]);
+  }, []);
 
   const handleSelectAnswer = (questionId: string, answerIndex: number) => {
     const question = questions.find(q => q.id === questionId);
@@ -247,47 +254,73 @@ function TestPage() {
 
     return "cursor-pointer";
   };
+  
+    const QuestionNavigator = ({ isSheet = false }: { isSheet?: boolean }) => (
+    <>
+      <div className={cn("p-4 border-b", isSheet ? "" : "md:border-b")}>
+        <h3 className="font-bold text-lg">Questions</h3>
+        <p className="text-sm text-muted-foreground">{questions.length}-question test</p>
+      </div>
+      <ScrollArea className={cn(isSheet ? "h-[calc(100vh-89px)]" : "h-32 md:h-[calc(100vh-89px)]")}>
+        <div className="p-4 grid grid-cols-5 sm:grid-cols-8 md:grid-cols-4 gap-2">
+          {questions.map((_, index) => (
+            <Button
+              key={index}
+              variant="outline"
+              className={cn("h-10 w-10 p-0 font-bold", getQuestionNavClass(index))}
+              onClick={() => {
+                setCurrentQuestionIndex(index);
+                if (isSheet) setIsSheetOpen(false);
+              }}
+            >
+              {index + 1}
+            </Button>
+          ))}
+        </div>
+      </ScrollArea>
+    </>
+  );
 
 
   return (
     <div className="flex flex-col md:flex-row h-screen overflow-hidden">
         {/* Question Navigation Sidebar */}
-        <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r bg-card">
-            <div className="p-4 border-b">
-                <h3 className="font-bold text-lg">Questions</h3>
-                <p className="text-sm text-muted-foreground">{questions.length}-question test</p>
-            </div>
-            <ScrollArea className="h-32 md:h-[calc(100vh-89px)]">
-                <div className="p-4 grid grid-cols-5 sm:grid-cols-8 md:grid-cols-4 gap-2">
-                    {questions.map((_, index) => (
-                        <Button
-                            key={index}
-                            variant="outline"
-                            className={cn("h-10 w-10 p-0 font-bold", getQuestionNavClass(index))}
-                            onClick={() => setCurrentQuestionIndex(index)}
-                        >
-                            {index + 1}
-                        </Button>
-                    ))}
-                </div>
-            </ScrollArea>
+        <aside className="hidden md:block w-full md:w-64 border-b md:border-b-0 md:border-r bg-card">
+            <QuestionNavigator />
         </aside>
 
         {/* Main Content */}
         <main className="flex-1 flex flex-col overflow-y-auto">
-            <header className="p-4 border-b flex justify-between items-center sticky top-0 bg-background/80 backdrop-blur-sm z-10">
-                <div className="w-full">
-                    <Progress value={progress} />
-                    <p className="text-sm text-muted-foreground mt-1">{Math.round(progress)}% Complete</p>
+            <header className="p-4 border-b flex flex-col sm:flex-row justify-between items-center gap-4 sticky top-0 bg-background/80 backdrop-blur-sm z-10">
+                <div className="w-full flex items-center gap-4">
+                  {isMobile && (
+                    <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                      <SheetTrigger asChild>
+                        <Button variant="outline" size="icon">
+                          <List className="h-5 w-5" />
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="left" className="p-0 w-full max-w-[280px]">
+                        <SheetHeader className="p-4 border-b text-left">
+                            <SheetTitle>Questions</SheetTitle>
+                        </SheetHeader>
+                        <QuestionNavigator isSheet={true} />
+                      </SheetContent>
+                    </Sheet>
+                  )}
+                  <div className="w-full">
+                      <Progress value={progress} />
+                      <p className="text-sm text-muted-foreground mt-1">{Math.round(progress)}% Complete</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4 ml-8">
+                <div className="flex items-center gap-4 self-end sm:self-center">
                 {timeRemaining !== null && (
-                    <div className="flex items-center font-mono text-lg font-semibold text-primary">
+                    <div className="flex items-center font-mono text-lg font-semibold text-primary shrink-0">
                         <Timer className="mr-2 h-5 w-5" />
                         {formatTime(timeRemaining)}
                     </div>
                 )}
-                <Button onClick={() => finishTest(false)} disabled={isFinishing}>
+                <Button onClick={() => finishTest(false)} disabled={isFinishing} className="shrink-0">
                     {isFinishing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <Flag className="mr-2 h-4 w-4" /> Finish Test
                 </Button>
@@ -304,9 +337,8 @@ function TestPage() {
                         <CardContent>
                              <RadioGroup
                                 key={currentQuestion.id}
-                                value={currentAnswer?.selectedAnswerIndex !== null ? String(currentAnswer.selectedAnswerIndex) : undefined}
+                                value={currentAnswer?.selectedAnswerIndex?.toString()}
                                 onValueChange={(value) => handleSelectAnswer(currentQuestion.id, Number(value))}
-                                disabled={currentAnswer?.selectedAnswerIndex !== null}
                                 className="space-y-4"
                             >
                                 {currentQuestion.options.map((option, index) => (
@@ -328,7 +360,12 @@ function TestPage() {
                             <Button variant="outline" onClick={() => setCurrentQuestionIndex(p => Math.max(0, p - 1))} disabled={currentQuestionIndex === 0}>
                                 <ArrowLeft className="mr-2 h-4 w-4" /> Previous
                             </Button>
-                            <Button onClick={() => setCurrentQuestionIndex(p => Math.min(questions.length - 1, p + 1))} disabled={currentQuestionIndex === questions.length - 1}>
+                            <Button onClick={() => {
+                                if (currentAnswer?.selectedAnswerIndex === null) {
+                                    handleSelectAnswer(currentQuestion.id, -1);
+                                }
+                                setCurrentQuestionIndex(p => Math.min(questions.length - 1, p + 1))
+                            }}>
                                 Next <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         </CardFooter>
