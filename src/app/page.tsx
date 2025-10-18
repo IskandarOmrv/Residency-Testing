@@ -70,9 +70,9 @@ export default function HomePage() {
           <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary md:h-16 md:w-16">
             <BrainCircuit className="h-7 w-7 md:h-8 md:w-8" />
           </div>
-          <CardTitle className="font-headline text-2xl md:text-3xl">Welcome to TestPrep Pro</CardTitle>
+          <CardTitle className="font-headline text-2xl md:text-3xl">Welcome to Residency Testing</CardTitle>
           <CardDescription>
-            Configure your practice test and start your preparation journey.
+            More than 2500 questions awaits you 
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
