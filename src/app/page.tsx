@@ -66,7 +66,7 @@ export default function HomePage() {
   };
 
  return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)]">
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
         <div className="flex-1 container mx-auto flex items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-2xl">
             <CardHeader className="text-center p-4 md:p-6">
