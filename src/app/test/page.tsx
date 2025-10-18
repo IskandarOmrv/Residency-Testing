@@ -35,10 +35,12 @@ import allQuestionsData from "@/data/questions.json";
 import {
   ArrowLeft,
   ArrowRight,
+  CheckCircle,
   Flag,
   List,
   Loader2,
   Timer,
+  XCircle,
 } from "lucide-react";
 import { Suspense } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -64,14 +66,19 @@ function TestPage() {
 
   React.useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = '';
+      if (sessionId) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
     };
 
     const handlePopState = () => {
       if (sessionId) {
         window.history.pushState(null, '', window.location.href);
-        document.getElementById('header-dialog-trigger')?.click();
+        const trigger = document.getElementById('header-dialog-trigger') as HTMLButtonElement | null;
+        if (trigger) {
+          trigger.click();
+        }
       }
     };
     
@@ -190,7 +197,10 @@ function TestPage() {
     const unansweredQuestions = answers.filter(a => a.selectedAnswerIndex === null).length;
     
     if (unansweredQuestions > 0 && !force) {
-      document.getElementById('finish-dialog-trigger')?.click();
+      const trigger = document.getElementById('finish-dialog-trigger') as HTMLButtonElement | null;
+      if (trigger) {
+        trigger.click();
+      }
       setIsFinishing(false);
       return;
     }
@@ -223,6 +233,9 @@ function TestPage() {
   const currentQuestion = questions[currentQuestionIndex];
   const currentAnswer = answers.find(a => a.questionId === currentQuestion?.id);
   const progress = (answers.filter(a => a.selectedAnswerIndex !== null).length / questions.length) * 100;
+
+  const correctAnswers = answers.filter(a => a.isCorrect === true).length;
+  const incorrectAnswers = answers.filter(a => a.isCorrect === false).length;
 
   if (isLoading) {
     return (
@@ -264,13 +277,9 @@ function TestPage() {
     return "cursor-pointer";
   };
   
-    const QuestionNavigator = ({ isSheet = false }: { isSheet?: boolean }) => (
-    <>
-      <div className={cn("p-4 border-b", isSheet ? "" : "md:border-b")}>
-        <h3 className="font-bold text-lg">Questions</h3>
-        <p className="text-sm text-muted-foreground">{questions.length}-question test</p>
-      </div>
-      <ScrollArea className={cn(isSheet ? "h-[calc(100vh-89px)]" : "h-32 md:h-[calc(100vh-89px)]")}>
+  const QuestionNavigator = () => (
+    <div className="flex flex-col h-full">
+      <ScrollArea className="flex-1">
         <div className="p-4 grid grid-cols-5 sm:grid-cols-8 md:grid-cols-4 gap-2">
           {questions.map((_, index) => (
             <Button
@@ -279,7 +288,7 @@ function TestPage() {
               className={cn("h-10 w-10 p-0 font-bold", getQuestionNavClass(index))}
               onClick={() => {
                 setCurrentQuestionIndex(index);
-                if (isSheet) setIsSheetOpen(false);
+                if (isMobile) setIsSheetOpen(false);
               }}
             >
               {index + 1}
@@ -287,15 +296,37 @@ function TestPage() {
           ))}
         </div>
       </ScrollArea>
-    </>
+    </div>
   );
 
 
   return (
     <div className="flex flex-col md:flex-row h-screen overflow-hidden">
         {/* Question Navigation Sidebar */}
-        <aside className="hidden md:block w-full md:w-64 border-b md:border-b-0 md:border-r bg-card">
-            <QuestionNavigator />
+        <aside className="hidden md:flex flex-col w-full md:w-64 border-b md:border-b-0 md:border-r bg-card">
+            <div className="flex flex-col h-full">
+                <div className="p-4 border-b">
+                    <h3 className="font-bold text-lg">Questions</h3>
+                    <p className="text-sm text-muted-foreground">{questions.length}-question test</p>
+                </div>
+                <ScrollArea className="flex-1">
+                    <div className="p-4 grid grid-cols-5 sm:grid-cols-8 md:grid-cols-4 gap-2">
+                    {questions.map((_, index) => (
+                        <Button
+                        key={index}
+                        variant="outline"
+                        className={cn("h-10 w-10 p-0 font-bold", getQuestionNavClass(index))}
+                        onClick={() => {
+                            setCurrentQuestionIndex(index);
+                            if (isMobile) setIsSheetOpen(false);
+                        }}
+                        >
+                        {index + 1}
+                        </Button>
+                    ))}
+                    </div>
+                </ScrollArea>
+            </div>
         </aside>
 
         {/* Main Content */}
@@ -310,16 +341,28 @@ function TestPage() {
                         </Button>
                       </SheetTrigger>
                       <SheetContent side="left" className="p-0 w-full max-w-[280px]">
-                        <SheetHeader className="p-4 border-b text-left">
+                        <SheetHeader className="p-4 border-b">
                             <SheetTitle>Questions</SheetTitle>
                         </SheetHeader>
-                        <QuestionNavigator isSheet={true} />
+                        <QuestionNavigator />
                       </SheetContent>
                     </Sheet>
                   )}
                   <div className="w-full">
                       <Progress value={progress} />
-                      <p className="text-sm text-muted-foreground mt-1">{Math.round(progress)}% Complete</p>
+                      <div className="flex justify-between items-center mt-1">
+                        <p className="text-sm text-muted-foreground">{Math.round(progress)}% Complete</p>
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center text-sm font-medium text-green-500">
+                                <CheckCircle className="mr-1 h-4 w-4" />
+                                <span>{correctAnswers}</span>
+                            </div>
+                            <div className="flex items-center text-sm font-medium text-red-500">
+                                <XCircle className="mr-1 h-4 w-4" />
+                                <span>{incorrectAnswers}</span>
+                            </div>
+                        </div>
+                      </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-4 self-end sm:self-center">
@@ -336,12 +379,12 @@ function TestPage() {
                 </div>
             </header>
 
-            <div className="flex-1 flex items-start sm:items-center justify-center p-2 sm:p-4">
+            <div className="flex-1 flex items-start sm:items-center justify-center p-2 sm:p-1">
                 {currentQuestion && (
                     <Card className="w-full max-w-3xl animate-in fade-in-50">
                         <CardHeader className="p-4 sm:p-6">
                             <CardTitle className="font-headline text-lg sm:text-xl">Question {currentQuestionIndex + 1}</CardTitle>
-                            <CardDescription className="text-base pt-2">{currentQuestion.questionText}</CardDescription>
+                            <CardDescription className="text-base pt-2 text-md sm:text-lg">{currentQuestion.questionText}</CardDescription>
                         </CardHeader>
                         <CardContent className="p-4 sm:p-6 pt-0">
                              <RadioGroup
@@ -357,6 +400,7 @@ function TestPage() {
                                         htmlFor={`${currentQuestion.id}-${index}`}
                                         className={cn(
                                             "flex items-center space-x-3 rounded-md border p-3 text-sm transition-all hover:bg-accent/50",
+                                            "sm:text-base",
                                             getOptionClassName(index, currentQuestion, currentAnswer)
                                         )}
                                     >
