@@ -291,8 +291,8 @@ function TestPage() {
 
         {/* Main Content */}
         <main className="flex-1 flex flex-col overflow-y-auto">
-            <header className="p-4 border-b flex flex-col sm:flex-row justify-between items-center gap-4 sticky top-0 bg-background/80 backdrop-blur-sm z-10">
-                <div className="w-full flex items-center gap-4">
+            <header className="p-2 sm:p-4 border-b flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-4 sticky top-0 bg-background/80 backdrop-blur-sm z-10">
+                <div className="w-full flex items-center gap-2 sm:gap-4">
                   {isMobile && (
                     <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                       <SheetTrigger asChild>
@@ -313,40 +313,40 @@ function TestPage() {
                       <p className="text-sm text-muted-foreground mt-1">{Math.round(progress)}% Complete</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 self-end sm:self-center">
+                <div className="flex items-center gap-2 sm:gap-4 self-end sm:self-center">
                 {timeRemaining !== null && (
-                    <div className="flex items-center font-mono text-lg font-semibold text-primary shrink-0">
+                    <div className="flex items-center font-mono text-base sm:text-lg font-semibold text-primary shrink-0">
                         <Timer className="mr-2 h-5 w-5" />
                         {formatTime(timeRemaining)}
                     </div>
                 )}
-                <Button onClick={() => finishTest(false)} disabled={isFinishing} className="shrink-0">
+                <Button onClick={() => finishTest(false)} disabled={isFinishing} className="shrink-0" size="sm" >
                     {isFinishing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <Flag className="mr-2 h-4 w-4" /> Finish Test
                 </Button>
                 </div>
             </header>
 
-            <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
+            <div className="flex-1 flex items-center justify-center p-2 sm:p-8">
                 {currentQuestion && (
                     <Card className="w-full max-w-3xl animate-in fade-in-50">
-                        <CardHeader>
-                            <CardTitle className="font-headline text-2xl">Question {currentQuestionIndex + 1}</CardTitle>
-                            <CardDescription className="text-lg pt-2">{currentQuestion.questionText}</CardDescription>
+                        <CardHeader className="p-4 sm:p-6">
+                            <CardTitle className="font-headline text-xl sm:text-2xl">Question {currentQuestionIndex + 1}</CardTitle>
+                            <CardDescription className="text-base sm:text-lg pt-2">{currentQuestion.questionText}</CardDescription>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="p-4 sm:p-6 pt-0">
                              <RadioGroup
                                 key={currentQuestion.id}
                                 value={currentAnswer?.selectedAnswerIndex?.toString()}
                                 onValueChange={(value) => handleSelectAnswer(currentQuestion.id, Number(value))}
-                                className="space-y-4"
+                                className="space-y-2 sm:space-y-4"
                             >
                                 {currentQuestion.options.map((option, index) => (
                                     <Label
                                         key={index}
                                         htmlFor={`${currentQuestion.id}-${index}`}
                                         className={cn(
-                                            "flex items-center space-x-4 rounded-md border p-4 transition-all hover:bg-accent/50",
+                                            "flex items-center space-x-4 rounded-md border p-3 sm:p-4 text-sm sm:text-base transition-all hover:bg-accent/50",
                                             getOptionClassName(index, currentQuestion, currentAnswer)
                                         )}
                                     >
@@ -356,7 +356,7 @@ function TestPage() {
                                 ))}
                             </RadioGroup>
                         </CardContent>
-                        <CardFooter className="flex justify-between">
+                        <CardFooter className="flex justify-between p-4 sm:p-6 pt-0">
                             <Button variant="outline" onClick={() => setCurrentQuestionIndex(p => Math.max(0, p - 1))} disabled={currentQuestionIndex === 0}>
                                 <ArrowLeft className="mr-2 h-4 w-4" /> Previous
                             </Button>
