@@ -73,6 +73,8 @@ function HistoryPage() {
       </div>
     );
   }
+  
+  const sortedHistory = [...history].sort((a, b) => b.date - a.date);
 
   return (
     <div className="container mx-auto max-w-5xl py-8 px-4">
@@ -116,48 +118,81 @@ function HistoryPage() {
               <Button onClick={() => router.push("/")}>Start a New Test</Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-center">Questions</TableHead>
-                    <TableHead className="text-center">Time Taken</TableHead>
-                    <TableHead className="text-center">Score</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {history
-                    .sort((a, b) => b.date - a.date)
-                    .map((result) => (
-                      <TableRow key={result.id}>
-                        <TableCell>
-                          {new Date(result.date).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {result.config.numQuestions}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {formatTime(result.timeTaken)}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={getScoreBadgeVariant(result.score)}>
-                            {result.score.toFixed(1)}%
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button asChild variant="ghost" size="sm">
+            <>
+              {/* Mobile View */}
+              <div className="sm:hidden space-y-4">
+                {sortedHistory.map((result) => (
+                  <Card key={result.id} className="w-full">
+                    <CardHeader>
+                      <CardTitle className="text-lg">{new Date(result.date).toLocaleDateString()}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="font-semibold text-muted-foreground">Questions:</div>
+                        <div>{result.config.numQuestions}</div>
+
+                        <div className="font-semibold text-muted-foreground">Time Taken:</div>
+                        <div>{formatTime(result.timeTaken)}</div>
+
+                        <div className="font-semibold text-muted-foreground">Score:</div>
+                        <div>
+                            <Badge variant={getScoreBadgeVariant(result.score)}>
+                                {result.score.toFixed(1)}%
+                            </Badge>
+                        </div>
+                    </CardContent>
+                    <div className="p-4 pt-0">
+                        <Button asChild className="w-full">
                             <Link href={`/results/${result.id}`}>
                               Review <ArrowRight className="ml-2 h-4 w-4" />
                             </Link>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            </div>
+                        </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Desktop View */}
+              <div className="hidden sm:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="text-center">Questions</TableHead>
+                      <TableHead className="text-center">Time Taken</TableHead>
+                      <TableHead className="text-center">Score</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedHistory.map((result) => (
+                        <TableRow key={result.id}>
+                          <TableCell>
+                            {new Date(result.date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {result.config.numQuestions}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {formatTime(result.timeTaken)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant={getScoreBadgeVariant(result.score)}>
+                              {result.score.toFixed(1)}%
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button asChild variant="ghost" size="sm">
+                              <Link href={`/results/${result.id}`}>
+                                Review <ArrowRight className="ml-2 h-4 w-4" />
+                              </Link>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
