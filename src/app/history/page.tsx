@@ -35,8 +35,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Suspense } from "react";
 
-export default function HistoryPage() {
+function HistoryPage() {
   const router = useRouter();
   const [history, setHistory] = React.useState<TestResult[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -162,4 +163,12 @@ export default function HistoryPage() {
       </Card>
     </div>
   );
+}
+
+export default function HistoryPageWrapper() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <HistoryPage />
+        </Suspense>
+    );
 }
