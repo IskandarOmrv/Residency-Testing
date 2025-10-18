@@ -39,20 +39,11 @@ import {
   Loader2,
   Timer,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-
-export default function TestPageWrapper() {
-  return (
-    <DndProvider backend={HTML5Backend}>
-      <TestPage />
-    </DndProvider>
-  )
-}
+import { Suspense } from "react";
 
 function TestPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
 
   const [questions, setQuestions] = React.useState<Question[]>([]);
   const [answers, setAnswers] = React.useState<UserAnswer[]>([]);
@@ -61,6 +52,7 @@ function TestPage() {
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isFinishing, setIsFinishing] = React.useState(false);
+  const [timerExpired, setTimerExpired] = React.useState(false);
   
   const timeLimit = React.useMemo(() => Number(searchParams.get("time") || "0") * 60, [searchParams]);
 
@@ -121,9 +113,9 @@ function TestPage() {
   
   React.useEffect(() => {
     if (timeRemaining === null) return;
-    
-    if (timeRemaining <= 0) {
-        finishTest(true);
+
+    if (timeRemaining <= 0 && !timerExpired) {
+        setTimerExpired(true);
         return;
     }
 
@@ -132,7 +124,13 @@ function TestPage() {
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [timeRemaining]);
+  }, [timeRemaining, timerExpired]);
+
+  React.useEffect(() => {
+    if (timerExpired) {
+      finishTest(true);
+    }
+  }, [timerExpired]);
   
   React.useEffect(() => {
     if(!isLoading && sessionId) {
@@ -152,9 +150,10 @@ function TestPage() {
       e.returnValue = '';
     };
 
-    const handlePopState = (e: PopStateEvent) => {
+    const handlePopState = () => {
         if (window.confirm('Are you sure you want to leave? Your test progress will be lost.')) {
             localStorage.removeItem("testprep-session");
+            router.push('/');
         } else {
             history.pushState(null, '', location.href);
         }
@@ -170,7 +169,7 @@ function TestPage() {
         window.removeEventListener('beforeunload', handleBeforeUnload);
         window.removeEventListener('popstate', handlePopState);
     };
-  }, []);
+  }, [router]);
   
   const handleSelectAnswer = (questionId: string, answerIndex: number) => {
     if (isAnswered(questionId)) return;
@@ -361,4 +360,14 @@ function TestPage() {
         </main>
     </div>
   );
+}
+
+export default function TestPageWrapper() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DndProvider backend={HTML5Backend}>
+        <TestPage />
+      </DndProvider>
+    </Suspense>
+  )
 }
