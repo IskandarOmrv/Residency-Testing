@@ -31,13 +31,14 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-const questionOptions = ["20", "30", "40", "50"];
+const questionOptions = ["20", "30", "50", "70" , "100"];
 const timeOptions = [
   { value: "0", label: "No Timer" },
-  { value: "0.1", label: "15 Minutes" },
+  { value: "15", label: "15 Minutes" },
   { value: "30", label: "30 Minutes" },
   { value: "45", label: "45 Minutes" },
   { value: "60", label: "60 Minutes" },
+  { value: "90", label: "90 Minutes" },
 ];
 
 export default function HomePage() {
