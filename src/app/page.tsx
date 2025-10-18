@@ -31,14 +31,13 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-const questionOptions = ["20", "30", "40", "50", "100"];
+const questionOptions = ["20", "30", "40", "50"];
 const timeOptions = [
   { value: "0", label: "No Timer" },
-  { value: "15", label: "15 Minutes" },
+  { value: "0.1", label: "15 Minutes" },
   { value: "30", label: "30 Minutes" },
   { value: "45", label: "45 Minutes" },
   { value: "60", label: "60 Minutes" },
-  { value: "90", label: "1 Hour 30 Minutes" }
 ];
 
 export default function HomePage() {
@@ -66,17 +65,17 @@ export default function HomePage() {
   return (
     <div className="container mx-auto flex min-h-[calc(100vh-4rem)] items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-2xl">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <BrainCircuit className="h-8 w-8" />
+        <CardHeader className="text-center p-4 md:p-6">
+          <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary md:h-16 md:w-16">
+            <BrainCircuit className="h-7 w-7 md:h-8 md:w-8" />
           </div>
-          <CardTitle className="font-headline text-3xl">Welcome to Residency Testing</CardTitle>
+          <CardTitle className="font-headline text-2xl md:text-3xl">Welcome to TestPrep Pro</CardTitle>
           <CardDescription>
             Configure your practice test and start your preparation journey.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 p-4 md:p-6 md:space-y-6">
             <div className="space-y-2">
               <Label htmlFor="numQuestions">Number of Questions</Label>
               <Controller
@@ -123,7 +122,7 @@ export default function HomePage() {
               />
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="p-4 md:p-6">
             <Button type="submit" className="w-full bg-primary hover:bg-primary/90">
               Start Test
             </Button>
