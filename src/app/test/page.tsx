@@ -63,6 +63,7 @@ function TestPage() {
   const [timerExpired, setTimerExpired] = React.useState(false);
   
   const timeLimit = React.useMemo(() => Number(searchParams.get("time") || "0") * 60, [searchParams]);
+  const allowNavigation = React.useMemo(() => searchParams.get("navigation") !== "false", [searchParams]);
 
   React.useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -152,23 +153,27 @@ function TestPage() {
   };
   
   React.useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (timeRemaining !== null && timeRemaining > 0) {
-      timer = setInterval(() => {
-        setTimeRemaining(prev => (prev !== null ? Math.max(0, prev - 1) : null));
-      }, 1000);
-    } else if (timeRemaining === 0) {
-        setTimerExpired(true);
-    }
-    return () => clearInterval(timer);
-  }, [timeRemaining]);
-
-  React.useEffect(() => {
     if (timerExpired) {
       finishTest(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timerExpired]);
+
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (timeRemaining !== null && timeRemaining > 0) {
+      timer = setInterval(() => {
+        setTimeRemaining(prev => {
+          const newTime = prev !== null ? Math.max(0, prev - 1) : null;
+          if (newTime === 0) {
+            setTimerExpired(true);
+          }
+          return newTime;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [timeRemaining]);
   
   React.useEffect(() => {
     if(!isLoading && sessionId) {
@@ -191,7 +196,7 @@ function TestPage() {
     setAnswers(prev => prev.map(a => a.questionId === questionId ? {...a, selectedAnswerIndex: answerIndex, isCorrect} : a));
   };
   
-  const finishTest = (force = false) => {
+  const finishTest = React.useCallback((force = false) => {
     if (isFinishing) return;
     setIsFinishing(true);
     const unansweredQuestions = answers.filter(a => a.selectedAnswerIndex === null).length;
@@ -228,7 +233,7 @@ function TestPage() {
     localStorage.removeItem("testprep-session");
     
     router.push(`/results/${sessionId}`);
-  };
+  }, [answers, isFinishing, questions, router, sessionId, timeLimit, timeRemaining]);
 
   const currentQuestion = questions[currentQuestionIndex];
   const currentAnswer = answers.find(a => a.questionId === currentQuestion?.id);
@@ -262,7 +267,7 @@ function TestPage() {
     const isSelected = answer?.selectedAnswerIndex === optionIndex;
     const isCorrect = question.correctAnswerIndex === optionIndex;
     const isAnswered = answer?.selectedAnswerIndex !== null;
-
+  
     if (isAnswered) {
       if (isCorrect) {
         return "border-green-500 bg-green-100/50 dark:bg-green-900/20 text-green-800 dark:text-green-300";
@@ -273,27 +278,34 @@ function TestPage() {
     } else if (isSelected) {
       return "border-primary";
     }
-
+  
     return "cursor-pointer";
   };
   
   const QuestionNavigator = () => (
     <div className="flex flex-col h-full">
+      <SheetHeader className="p-4 border-b">
+          <SheetTitle>Questions</SheetTitle>
+      </SheetHeader>
       <ScrollArea className="flex-1">
         <div className="p-4 grid grid-cols-5 sm:grid-cols-8 md:grid-cols-4 gap-2">
-          {questions.map((_, index) => (
-            <Button
-              key={index}
-              variant="outline"
-              className={cn("h-10 w-10 p-0 font-bold", getQuestionNavClass(index))}
-              onClick={() => {
-                setCurrentQuestionIndex(index);
-                if (isMobile) setIsSheetOpen(false);
-              }}
-            >
-              {index + 1}
-            </Button>
-          ))}
+          {questions.map((q, index) => {
+            const isAnswered = answers[index]?.selectedAnswerIndex !== null;
+            return (
+              <Button
+                key={index}
+                variant="outline"
+                className={cn("h-10 w-10 p-0 font-bold", getQuestionNavClass(index))}
+                onClick={() => {
+                  setCurrentQuestionIndex(index);
+                  if (isMobile) setIsSheetOpen(false);
+                }}
+                disabled={!allowNavigation && !isAnswered}
+              >
+                {index + 1}
+              </Button>
+            );
+          })}
         </div>
       </ScrollArea>
     </div>
@@ -304,29 +316,28 @@ function TestPage() {
     <div className="flex flex-col md:flex-row h-screen overflow-hidden">
         {/* Question Navigation Sidebar */}
         <aside className="hidden md:flex flex-col w-full md:w-64 border-b md:border-b-0 md:border-r bg-card">
-            <div className="flex flex-col h-full">
-                <div className="p-4 border-b">
-                    <h3 className="font-bold text-lg">Questions</h3>
-                    <p className="text-sm text-muted-foreground">{questions.length}-question test</p>
-                </div>
-                <ScrollArea className="flex-1">
-                    <div className="p-4 grid grid-cols-5 sm:grid-cols-8 md:grid-cols-4 gap-2">
-                    {questions.map((_, index) => (
-                        <Button
-                        key={index}
-                        variant="outline"
-                        className={cn("h-10 w-10 p-0 font-bold", getQuestionNavClass(index))}
-                        onClick={() => {
-                            setCurrentQuestionIndex(index);
-                            if (isMobile) setIsSheetOpen(false);
-                        }}
-                        >
-                        {index + 1}
-                        </Button>
-                    ))}
-                    </div>
-                </ScrollArea>
-            </div>
+          <div className="p-4 border-b">
+              <h3 className="font-bold text-lg">Questions</h3>
+              <p className="text-sm text-muted-foreground">{questions.length}-question test</p>
+          </div>
+          <ScrollArea className="flex-1">
+              <div className="p-4 grid grid-cols-5 sm:grid-cols-8 md:grid-cols-4 gap-2">
+              {questions.map((q, index) => {
+                const isAnswered = answers[index]?.selectedAnswerIndex !== null;
+                return (
+                  <Button
+                  key={index}
+                  variant="outline"
+                  className={cn("h-10 w-10 p-0 font-bold", getQuestionNavClass(index))}
+                  onClick={() => setCurrentQuestionIndex(index)}
+                  disabled={!allowNavigation && !isAnswered}
+                  >
+                  {index + 1}
+                  </Button>
+                );
+              })}
+              </div>
+          </ScrollArea>
         </aside>
 
         {/* Main Content */}
@@ -341,9 +352,6 @@ function TestPage() {
                         </Button>
                       </SheetTrigger>
                       <SheetContent side="left" className="p-0 w-full max-w-[280px]">
-                        <SheetHeader className="p-4 border-b">
-                            <SheetTitle>Questions</SheetTitle>
-                        </SheetHeader>
                         <QuestionNavigator />
                       </SheetContent>
                     </Sheet>
@@ -411,15 +419,25 @@ function TestPage() {
                             </RadioGroup>
                         </CardContent>
                         <CardFooter className="flex justify-between p-4 sm:p-6 pt-0">
-                            <Button variant="outline" onClick={() => setCurrentQuestionIndex(p => Math.max(0, p - 1))} disabled={currentQuestionIndex === 0} size="sm">
-                                <ArrowLeft className="mr-2 h-4 w-4" /> Previous
-                            </Button>
-                            <Button onClick={() => {
-                                if (currentAnswer?.selectedAnswerIndex === null) {
-                                    handleSelectAnswer(currentQuestion.id, -1); 
-                                }
-                                setCurrentQuestionIndex(p => Math.min(questions.length - 1, p + 1))
-                            }}>
+                            {allowNavigation && (
+                                <Button 
+                                    variant="outline" 
+                                    onClick={() => setCurrentQuestionIndex(p => Math.max(0, p - 1))} 
+                                    disabled={currentQuestionIndex === 0} 
+                                    size="sm"
+                                >
+                                    <ArrowLeft className="mr-2 h-4 w-4" /> Previous
+                                </Button>
+                            )}
+                            {!allowNavigation && <div />} 
+                            <Button 
+                                onClick={() => {
+                                  if (currentQuestionIndex < questions.length - 1) {
+                                    setCurrentQuestionIndex(p => p + 1);
+                                  }
+                                }}
+                                disabled={(!allowNavigation && currentAnswer?.selectedAnswerIndex === null) || currentQuestionIndex === questions.length - 1}
+                            >
                                 Next <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         </CardFooter>
