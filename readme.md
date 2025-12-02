@@ -65,11 +65,11 @@ The project follows a standard Next.js App Router structure:
 
 1.  Clone the repository:
     ```bash
-    git clone <repository-url>
+    git clone https://github.com/IskandarOmrv/Residency-Testing
     ```
 2.  Navigate to the project directory:
     ```bash
-    cd <project-directory>
+    cd Residency-Testing
     ```
 3.  Install the dependencies:
     ```bash
